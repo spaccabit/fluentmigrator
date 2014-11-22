@@ -9,7 +9,7 @@ namespace FluentMigrator.Runner.Generators.Generic
     {
         public virtual string QuoteValue(object value)
         {
-            if (value == null) { return FormatNull(); }
+            if (value == null || value is DBNull) { return FormatNull(); }
 
             string stringValue = value as string;
             if (stringValue != null) { return FormatString(stringValue); }
@@ -29,8 +29,14 @@ namespace FluentMigrator.Runner.Generators.Generic
             if (value is decimal) { return FormatDecimal((decimal)value); }
             if (value is RawSql) { return ((RawSql) value).Value; }
             if (value is byte[]) { return FormatByteArray((byte[])value); }
+            if (value is TimeSpan) { return FromTimeSpan((TimeSpan)value); }
             
 			return value.ToString();
+        }
+
+        public virtual string FromTimeSpan(TimeSpan value)
+        {
+            return ValueQuote + value.ToString() + ValueQuote;
         }
 
         protected virtual string FormatByteArray(byte[] value)
@@ -116,6 +122,7 @@ namespace FluentMigrator.Runner.Generators.Generic
         /// </summary>
         public virtual bool IsQuoted(string name)
         {
+            if (String.IsNullOrEmpty(name)) return false;
             //This can return true incorrectly in some cases edge cases.
             //If a string say [myname]] is passed in this is not correctly quote for MSSQL but this function will
             //return true. 

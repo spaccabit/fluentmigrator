@@ -23,6 +23,8 @@ namespace FluentMigrator.VersionTableInfo
         string SchemaName { get; }
         string TableName { get; }
         string ColumnName { get; }
+        string DescriptionColumnName { get; }
         string UniqueIndexName { get; }
+        string AppliedOnColumnName { get; }
     }
 }

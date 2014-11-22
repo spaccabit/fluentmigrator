@@ -184,7 +184,7 @@ namespace FluentMigrator.Console
                 }
                 catch (OptionException e)
                 {
-                    consoleAnnouncer.Error(e.Message);
+                    consoleAnnouncer.Error(e);
                     consoleAnnouncer.Say("Try 'migrate --help' for more information.");
                     return;
                 }
@@ -218,7 +218,7 @@ namespace FluentMigrator.Console
             }
             catch (Exception ex)
             {
-                consoleAnnouncer.Error(ex.ToString());
+                consoleAnnouncer.Error(ex);
                 Environment.ExitCode = 1;
             }
 
@@ -258,17 +258,26 @@ namespace FluentMigrator.Console
         {
             using (var sw = new StreamWriter(outputTo))
             {
-                var fileAnnouncer = new TextWriterAnnouncer(sw)
-                                        {
-                                            ShowElapsedTime = false,
-                                            ShowSql = true
-                                        };
+                var fileAnnouncer = this.ExecutingAgainstMsSql ?
+                    new TextWriterWithGoAnnouncer(sw) :
+                    new TextWriterAnnouncer(sw);
+
+                fileAnnouncer.ShowElapsedTime = false;
+                fileAnnouncer.ShowSql = true;
+
                 consoleAnnouncer.ShowElapsedTime = Verbose;
                 consoleAnnouncer.ShowSql = Verbose;
 
                 var announcer = new CompositeAnnouncer(consoleAnnouncer, fileAnnouncer);
 
                 ExecuteMigrations(announcer);
+            }
+        }
+        private bool ExecutingAgainstMsSql
+        {
+            get
+            {
+                return ProcessorType.StartsWith("SqlServer", StringComparison.InvariantCultureIgnoreCase);
             }
         }
 

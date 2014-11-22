@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 
 // Copyright (c) 2007-2009, Sean Chambers <schambers80@gmail.com>
 // 
@@ -18,6 +18,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using FluentMigrator.Helpers;
 using FluentMigrator.Infrastructure.Extensions;
 
 namespace FluentMigrator.Infrastructure
@@ -25,19 +26,33 @@ namespace FluentMigrator.Infrastructure
     public class MigrationInfo : IMigrationInfo
     {
         private readonly Dictionary<string, object> _traits = new Dictionary<string, object>();
+        private LazyLoader<IMigration> _lazyMigration;
 
         public MigrationInfo(long version, TransactionBehavior transactionBehavior, IMigration migration)
+            : this(version, null, transactionBehavior, () => migration)
         {
-            if (migration == null) throw new ArgumentNullException("migration");
+        }
+
+        public MigrationInfo(long version, string description, TransactionBehavior transactionBehavior, Func<IMigration> migrationFunc)
+        {
+            if (migrationFunc == null) throw new ArgumentNullException("migrationFunc");
 
             Version = version;
+            Description = description;
             TransactionBehavior = transactionBehavior;
-            Migration = migration;
+            _lazyMigration = new LazyLoader<IMigration>(migrationFunc);
         }
 
         public long Version { get; private set; }
+        public string Description { get; private set; }
         public TransactionBehavior TransactionBehavior { get; private set; }
-        public IMigration Migration { get; private set; }
+        public IMigration Migration
+        {
+            get
+            {
+                return _lazyMigration.Value;
+            }
+        }
 
         public object Trait(string name)
         {
