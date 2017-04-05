@@ -126,39 +126,7 @@ namespace FluentMigrator.Runner
 
         public void MigrateUp(bool useAutomaticTransactionManagement)
         {
-            var migrations = MigrationLoader.LoadMigrations();
-
-            using (IMigrationScope scope = _migrationScopeHandler.CreateOrWrapMigrationScope(useAutomaticTransactionManagement && TransactionPerSession))
-            {
-                try
-                {
-                    ApplyMaintenance(MigrationStage.BeforeAll, useAutomaticTransactionManagement);
-
-                    foreach (var pair in migrations)
-                    {
-                        ApplyMaintenance(MigrationStage.BeforeEach, useAutomaticTransactionManagement);
-                        ApplyMigrationUp(pair.Value, useAutomaticTransactionManagement && pair.Value.TransactionBehavior == TransactionBehavior.Default);
-                        ApplyMaintenance(MigrationStage.AfterEach, useAutomaticTransactionManagement);
-                    }
-
-                    ApplyMaintenance(MigrationStage.BeforeProfiles, useAutomaticTransactionManagement);
-
-                    ApplyProfiles();
-
-                    ApplyMaintenance(MigrationStage.AfterAll, useAutomaticTransactionManagement);
-
-                    scope.Complete();
-                }
-                catch
-                {
-                    if (scope.IsActive)
-                        scope.Cancel();  // SQLAnywhere needs explicit call to rollback transaction
-
-                    throw;
-                }
-            }
-
-            VersionLoader.LoadVersionInfo();
+            MigrateUp(long.MaxValue, useAutomaticTransactionManagement);
         }
 
         public void MigrateUp(long targetVersion)
@@ -169,16 +137,25 @@ namespace FluentMigrator.Runner
         public void MigrateUp(long targetVersion, bool useAutomaticTransactionManagement)
         {
             var migrationInfos = GetUpMigrationsToApply(targetVersion);
+
             using (IMigrationScope scope = _migrationScopeHandler.CreateOrWrapMigrationScope(useAutomaticTransactionManagement && TransactionPerSession))
             {
                 try
                 {
+                    ApplyMaintenance(MigrationStage.BeforeAll, useAutomaticTransactionManagement);
+
                     foreach (var migrationInfo in migrationInfos)
                     {
+                        ApplyMaintenance(MigrationStage.BeforeEach, useAutomaticTransactionManagement);
                         ApplyMigrationUp(migrationInfo, useAutomaticTransactionManagement && migrationInfo.TransactionBehavior == TransactionBehavior.Default);
+                        ApplyMaintenance(MigrationStage.AfterEach, useAutomaticTransactionManagement);
                     }
 
+                    ApplyMaintenance(MigrationStage.BeforeProfiles, useAutomaticTransactionManagement);
+
                     ApplyProfiles();
+
+                    ApplyMaintenance(MigrationStage.AfterAll, useAutomaticTransactionManagement);
 
                     scope.Complete();
                 }
@@ -253,8 +230,7 @@ namespace FluentMigrator.Runner
 
             var migrationsToApply = (from pair in migrations 
                                      where IsMigrationStepNeededForDownMigration(pair.Key, targetVersion) 
-                                     select pair.Value)
-                                     .ToList();
+                                     select pair.Value);
 
             return migrationsToApply.OrderByDescending(x => x.Version);
         }
